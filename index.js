@@ -114,10 +114,10 @@ app.get('/files/:id', async (req, res) => {
       Prefix: id + "/"
     }));
 
- const files = result.Contents?.map(obj => obj.Key) || [];
- const reconstructedFiles = files.map(file => file.replace(`${id}/`, ''));
+ const allFiles = result.Contents?.map(obj => obj.Key) || [];
+ const files = allFiles.map(file => file.replace(`${id}/`, ''));
 
-    res.send({ reconstructedFiles });
+    res.send({ files });
   } catch (err) {
     res.status(500).send({ message: 'Could not list files' });
   }
