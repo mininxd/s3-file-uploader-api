@@ -98,7 +98,7 @@ app.post('/upload', (req, res) => {
 app.get('/files', async (req, res) => {
   return res.send({
       "/:id": "[GET] put your id to list all your files",
-      "/:id?file=": "[GET] download your file directly",
+      "/:id/:filename": "[GET] download your file directly",
     });
 });
 
@@ -106,9 +106,9 @@ app.get('/files', async (req, res) => {
 // deprecated, but i won't delete this
 app.get('/files/:id', async (req, res) => {
   const { id } = req.params;
-  const { file } = req.query;
+  const { filename } = req.query;
   
-  if(!file) {
+  if(!filename) {
   try {
     const result = await s3.send(new ListObjectsV2Command({
       Bucket: process.env.BUCKET,
@@ -126,15 +126,15 @@ app.get('/files/:id', async (req, res) => {
   try {
     const { Body } = await s3.send(new GetObjectCommand({
       Bucket: process.env.BUCKET,
-      Key: `${id}/${file}`,
+      Key: `${id}/${filename}`,
     }));
 
     const fileBuffer = await streamToBuffer(Body);
 
     res.setHeader('Content-Type', 'application/octet-stream');
-    res.setHeader('Content-Disposition', `attachment; filename="${file}"`);
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
 
-    res.send(fileBuffer);
+    res.status(200).send(fileBuffer);
   } catch (e) {
     console.error(e);
     res.status(404).send({ error: 'File not found!' });
@@ -158,7 +158,7 @@ app.get('/files/:id/:filename', async (req, res) => {
     res.setHeader('Content-Type', 'application/octet-stream');
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
 
-    res.send(fileBuffer);
+    res.status(200).send(fileBuffer);
   } catch (e) {
     console.error(e);
     res.status(404).send({ error: 'File not found' });
