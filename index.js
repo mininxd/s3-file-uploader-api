@@ -118,7 +118,7 @@ app.get('/files/:id', async (req, res) => {
  const allFiles = result.Contents?.map(obj => obj.Key) || [];
  const files = allFiles.map(file => file.replace(`${id}/`, ''));
 
-    res.send({ files, result });
+    res.send({ files });
   } catch (err) {
     res.status(500).send({ message: 'Could not list files' });
   }
