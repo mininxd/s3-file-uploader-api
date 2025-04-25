@@ -137,7 +137,7 @@ app.get('/files/:id', async (req, res) => {
     res.send(fileBuffer);
   } catch (e) {
     console.error(e);
-    res.status(500).send({ error: 'Failed to fetch the file', details: e.message });
+    res.status(404).send({ error: 'File not found!' });
   }
 }
 });
@@ -161,7 +161,7 @@ app.get('/files/:id/:filename', async (req, res) => {
     res.send(fileBuffer);
   } catch (e) {
     console.error(e);
-    res.status(500).send({ error: 'Failed to fetch the file', details: e.message });
+    res.status(404).send({ error: 'File not found' });
   }
 });
 
