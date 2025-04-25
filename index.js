@@ -1,5 +1,6 @@
 import express from 'express';
 import { S3Client, PutObjectCommand, ListObjectsV2Command, GetObjectCommand } from '@aws-sdk/client-s3';
+import { deleteFile } from "./lib/delete.js"
 import 'dotenv/config';
 
 const streamToBuffer = (stream) => {
@@ -165,6 +166,19 @@ app.get('/files/:id/:filename', async (req, res) => {
   }
 });
 
+app.get('/delete/:id/:filename', async (req, res) => {
+  const { id, filename } = req.params;
+
+  try {
+    const result = await deleteFile(id, filename);
+    res.send(result);
+  } catch (e) {
+    res.status(500).send(`error: ${e.message}`);
+  }
+});
 
 
-app.listen(3000);
+app.listen(3000, () => {
+  console.log('app running on :3000');
+});
+

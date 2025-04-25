@@ -1,7 +1,7 @@
 ### File management API with expiration time on S3 Storage
 
 You can disable expiration time by your own, see `line 81` on `index.js` and remove the line 
-
+`maybe expiration time not supported on most S3 Storages`
 
 before deploy or run, edit your S3 credentials on `.env`, see `.env-example`
 
@@ -70,4 +70,13 @@ curl "http://your-api-endpoint/files/:id/:yourFiles"
 Usage :
 ```bash
 curl "http://your-api-endpoint/files/uniqueId/hello_world.txt"
+```
+
+#### How to delete the files :
+```bash
+curl "http://your-api-endpoint/delete/:id/:yourFiles"
+```
+Usage :
+```bash
+curl "http://your-api-endpoint/delete/uniqueId/hello_world.txt"
 ```
