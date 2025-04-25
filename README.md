@@ -7,36 +7,43 @@ before deploy or run, edit your S3 credentials on `.env`, see `.env-example`
 
 
 
-#### How to upload use axios :
+#### How to upload use javascript :
 ```javascript
 import fs from 'fs';
-import axios from 'axios';
-import FormData from 'form-data';
+import fetch from 'node-fetch';
+import path from 'path';
 
+/**
+ * Upload a file using raw stream (not FormData)
+ * @param {string} filePath - Full path to the file to upload
+ * @param {string} fileId - Unique ID for file grouping
+ * @param {number} exp - Expiration time in hours
+ */
 function upload(filePath, fileId, exp) {
-  const file = fs.createReadStream(filePath);  // Create a readable stream from the file
+  const fileStream = fs.createReadStream(filePath);
+  const fileName = path.basename(filePath);
 
-  const formData = new FormData();
-  formData.append('file', file);
-
-  axios.post('http://your-api-endpoint/upload', formData, {
+  fetch('https://your-api-endpoint/upload', {
+    method: 'POST',
     headers: {
-      'x-file-id': // unique ID,
-      'x-file-name': // fileName
-      'x-file-exp': exp.toString(),  // Expiration time in hours
-      ...formData.getHeaders()
+      'x-file-id': fileId,
+      'x-file-name': fileName,
+      'x-file-exp': String(exp),
+      'Content-Type': 'application/octet-stream',
     },
+    body: fileStream,
   })
-  .then((response) => {
-    console.log('Upload successful:', response.data);
+  .then(res => res.json())
+  .then(result => {
+    console.log(result);
+    console.log('Next file upload in 30 minutes!');
   })
-  .catch((error) => {
-    console.error('Upload failed:', error.message);
-  });
+  .catch(error => console.error('Error:', error));
 }
 
-// Usage example: Upload file with 2 hours expiration time
-upload('./path/to/your/file.txt', 'uniqueId', 2);
+// Example usage
+upload('./hello_world.txt', 'uniqueId', 2);
+
 ```
 
 
@@ -46,7 +53,7 @@ curl "http://your-api-endpoint/files/:id"
 ```
 Usage :
 ```bash
-curl "http://your-api-endpoint/files/AF38125CADE"
+curl "http://your-api-endpoint/files/uniqueId"
 ```
 Output :
 ```json
@@ -58,9 +65,9 @@ Output :
 
 #### How to download the files :
 ```bash
-curl "http://your-api-endpoint/files/:id?file=yourFiles"
+curl "http://your-api-endpoint/files/:id/:yourFiles"
 ```
 Usage :
 ```bash
-curl "http://your-api-endpoint/files/AF38125CADE?file=test.txt"
+curl "http://your-api-endpoint/files/uniqueId/hello_world.txt"
 ```
