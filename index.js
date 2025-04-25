@@ -103,6 +103,7 @@ app.get('/files', async (req, res) => {
 });
 
 
+// deprecated, but i won't delete this
 app.get('/files/:id', async (req, res) => {
   const { id } = req.params;
   const { file } = req.query;
@@ -117,7 +118,7 @@ app.get('/files/:id', async (req, res) => {
  const allFiles = result.Contents?.map(obj => obj.Key) || [];
  const files = allFiles.map(file => file.replace(`${id}/`, ''));
 
-    res.send({ files });
+    res.send({ files, result });
   } catch (err) {
     res.status(500).send({ message: 'Could not list files' });
   }
@@ -139,6 +140,29 @@ app.get('/files/:id', async (req, res) => {
     res.status(500).send({ error: 'Failed to fetch the file', details: e.message });
   }
 }
+});
+
+
+// rather than delete old method using queries, im added multiple params for download files
+app.get('/files/:id/:filename', async (req, res) => {
+  const { id, filename } = req.params;
+  
+  try {
+    const { Body } = await s3.send(new GetObjectCommand({
+      Bucket: process.env.BUCKET,
+      Key: `${id}/${filename}`,
+    }));
+
+    const fileBuffer = await streamToBuffer(Body);
+
+    res.setHeader('Content-Type', 'application/octet-stream');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+
+    res.send(fileBuffer);
+  } catch (e) {
+    console.error(e);
+    res.status(500).send({ error: 'Failed to fetch the file', details: e.message });
+  }
 });
 
 
