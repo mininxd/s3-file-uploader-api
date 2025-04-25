@@ -16,9 +16,11 @@ import path from 'path';
 /**
  * Upload a file using raw stream (not FormData)
  * @param {string} filePath - Full path to the file to upload
- * @param {string} fileId - Unique ID for file grouping
- * @param {number} exp - Expiration time in hours
+ * @param {string} fileId - Unique ID, try using long random words for safety from deleting and try hide your ID when using this API
+ * @param {number} exp - Expiration time in hours, maybe not working on specific S3 Object Storage
  */
+ 
+ 
 function upload(filePath, fileId, exp) {
   const fileStream = fs.createReadStream(filePath);
   const fileName = path.basename(filePath);
