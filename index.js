@@ -53,7 +53,7 @@ app.post('/upload', (req, res) => {
   req.on('end', async () => {
     const Body = Buffer.concat(chunks);
     const Key = `${req.headers['x-file-id']}/${req.headers['x-file-name']}`;
-
+    const fileSizeInKB = (Buffer.concat(chunks).length / 1024).toFixed(2);
 
 
 
@@ -82,6 +82,10 @@ app.post('/upload', (req, res) => {
 */
     
     try {
+      if(Number(fileSizeInKB) > 512) {
+      res.send({"messages":"files to large"})
+      return;
+      }
       const params = {
         Body,
         Bucket: process.env.BUCKET,
@@ -92,9 +96,13 @@ app.post('/upload', (req, res) => {
       };
 
       await s3.send(new PutObjectCommand(params));
-      res.send(params);
+      res.status(200).send({
+        message: "success",
+        fileName: Key.split("/")[1],
+        fileSize: `${fileSizeInKB} KB`,
+      });
     } catch (error) {
-      res.status(500).send(`Error uploading file: ${error.message}`);
+      res.status(500).send(`Error uploading file.`);
     }
   });
 
