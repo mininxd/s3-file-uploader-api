@@ -37,13 +37,21 @@ app.get('/', async (req, res) => {
   })
 })
 
-app.post('/upload', (req, res) => {
+app.post('/upload', async (req, res) => {
   if(!req.headers['x-file-name'] || !req.headers['x-file-id']) {
     res.send({
       message: "x-file-id and x-file-name headers required"
     })
     return
   }
+  
+  const bucketSize = await getBucketSize();
+  const usage = (bucketSize / (1024 ** 3)).toFixed(2); 
+  
+  if (usage > 9.5) {
+      res.send({ message: "Insufficient storage. Please wait patiently before uploading again." });
+      return;
+    }
   
   const chunks = [];
   req.on('data', chunk => {
@@ -98,7 +106,8 @@ if (!expirationHeader) {
         message: "success",
         fileName: Key.split("/").pop(),
         fileSize: `${fileSizeInKB} KB`,
-        fileExpiredIn: expirationTime.toISOString()
+        fileExpiredIn: expirationTime.toISOString(),
+        downloadUrl: `https://s3.mininxd.web.id/${Key}`
       });
     } catch (error) {
       console.log(error);
@@ -117,17 +126,14 @@ app.get('/files', async (req, res) => {
       "/:id/:filename": "[GET] download your file directly",
     });
 });
+
+
 app.get('/check', async (req, res) => {
   try {
-    const size = await getBucketSize();  
-    const bucketSize = (size / (1024 ** 3)).toFixed(2); 
-
-    if (parseFloat(bucketSize) > 9.9) {
-      return res.send({ message: "Quota reached maximum, wait patiently for able upload again" });
-    }
-
+  const bucketSize = await getBucketSize();
+  const usage = (bucketSize / (1024 ** 3)).toFixed(2); 
     res.send({
-      usage: `${bucketSize}GB/10GB`
+      usage: `${usage}GB/10GB`
     });
   } catch (error) {
     res.status(500).send({ message: "Error calculating bucket size", error: error.message });

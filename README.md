@@ -27,6 +27,7 @@ function upload(filePath, fileId, exp) {
     headers: {
       'x-file-id': fileId,
       'x-file-name': fileName,
+      'x-file-expiration': "24", //default is 24 hours
       'Content-Type': 'application/octet-stream',
     },
     body: fileStream,
