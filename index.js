@@ -1,6 +1,7 @@
 import express from 'express';
 import { S3Client, PutObjectCommand, ListObjectsV2Command, GetObjectCommand } from '@aws-sdk/client-s3';
-import { deleteFile } from "./lib/delete.js"
+import { deleteFile } from "./lib/delete.js";
+import { getBucketSize } from "./lib/bucketSize.js";
 import 'dotenv/config';
 
 const streamToBuffer = (stream) => {
@@ -54,54 +55,53 @@ app.post('/upload', (req, res) => {
     const Body = Buffer.concat(chunks);
     const Key = `${req.headers['x-file-id']}/${req.headers['x-file-name']}`;
     const fileSizeInKB = (Buffer.concat(chunks).length / 1024).toFixed(2);
+    
+    
+let expirationTime = new Date();
+const expirationHeader = req.headers['x-file-expiration'];
 
+if (!expirationHeader) {
+  expirationTime.setHours(expirationTime.getHours() + 24);
+} else {
+  const expirationHours = Number(expirationHeader);
 
+  if (!Number.isInteger(expirationHours) || expirationHours <= 0) {
+    return res.status(400).send({ message: "Expiration time must be a positive integer" });
+  }
 
-// DISABLE METADATA BECAUSE DEPRECATED OR NOT WORKING
+  if (expirationHours > 24) {
+    return res.status(400).send({ message: "Time expiration can't exceed 24 hours" });
+  }
 
-/*
-   let expirationTime = new Date();
-   const expirationHeader = req.headers['x-file-exp'];
-   
-    if (!expirationHeader) {
-      expirationTime.setHours(expirationTime.getHours() + 1);
-    } else {
-      const expirationHours = parseInt(expirationHeader, 10);
-      if (isNaN(expirationHours) || expirationHours <= 0) {
-        return res.status(400).send({
-          message: "Expiration time must be a positive number"
-        });
-      }
-      if (expirationHours > 24) {
-        return res.status(400).send({
-          message: "Time expiration can't exceed 24 hours"
-        });
-      }
-      expirationTime.setHours(expirationTime.getHours() + expirationHours);
-    }
-*/
+  expirationTime.setHours(expirationTime.getHours() + expirationHours);
+}
+
     
     try {
-      if(Number(fileSizeInKB) > 512) {
-      res.send({"messages":"files to large"})
-      return;
+      if(Number(fileSizeInKB) > 10240) {
+       res.send({"messages":"files to large"});
+       return;
       }
+      
       const params = {
-        Body,
-        Bucket: process.env.BUCKET,
-        Key, 
-        Metadata: {
-        //  'x-file-expiration': expirationTime.toISOString(),
-        },
+       Body,
+       Bucket: process.env.BUCKET,
+       Key,
+       Metadata: {
+         "x-file-expiration": expirationTime.toISOString(),
+         },
       };
+
 
       await s3.send(new PutObjectCommand(params));
       res.status(200).send({
         message: "success",
-        fileName: Key.split("/")[1],
+        fileName: Key.split("/").pop(),
         fileSize: `${fileSizeInKB} KB`,
+        fileExpiredIn: expirationTime.toISOString()
       });
     } catch (error) {
+      console.log(error);
       res.status(500).send(`Error uploading file.`);
     }
   });
@@ -117,6 +117,24 @@ app.get('/files', async (req, res) => {
       "/:id/:filename": "[GET] download your file directly",
     });
 });
+app.get('/check', async (req, res) => {
+  try {
+    const size = await getBucketSize();  
+    const bucketSize = (size / (1024 ** 3)).toFixed(2); 
+
+    if (parseFloat(bucketSize) > 9.9) {
+      return res.send({ message: "Quota reached maximum, wait patiently for able upload again" });
+    }
+
+    res.send({
+      usage: `${bucketSize}GB/10GB`
+    });
+  } catch (error) {
+    res.status(500).send({ message: "Error calculating bucket size", error: error.message });
+  }
+});
+
+
 
 
 // deprecated, but i won't delete this
