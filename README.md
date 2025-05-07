@@ -1,9 +1,6 @@
 ### File management API with expiration time on S3 Storage
 
-You can disable expiration time by your own, see `line 81` on `index.js` and remove the line 
-`maybe expiration time not supported on most S3 Storages`
-
-before deploy or run, edit your S3 credentials on `.env`, see `.env-example`
+before deploy or run, edit your S3 credentials on `.env`, see `.env-example` for examples
 
 
 
@@ -30,7 +27,6 @@ function upload(filePath, fileId, exp) {
     headers: {
       'x-file-id': fileId,
       'x-file-name': fileName,
-      'x-file-exp': String(exp),
       'Content-Type': 'application/octet-stream',
     },
     body: fileStream,

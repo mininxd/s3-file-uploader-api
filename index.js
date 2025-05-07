@@ -47,12 +47,19 @@ app.post('/upload', (req, res) => {
   const chunks = [];
   req.on('data', chunk => {
     chunks.push(chunk);
+    console.log(chunk);
   });
 
   req.on('end', async () => {
     const Body = Buffer.concat(chunks);
     const Key = `${req.headers['x-file-id']}/${req.headers['x-file-name']}`;
 
+
+
+
+// DISABLE METADATA BECAUSE DEPRECATED OR NOT WORKING
+
+/*
    let expirationTime = new Date();
    const expirationHeader = req.headers['x-file-exp'];
    
@@ -72,7 +79,7 @@ app.post('/upload', (req, res) => {
       }
       expirationTime.setHours(expirationTime.getHours() + expirationHours);
     }
-
+*/
     
     try {
       const params = {
@@ -80,7 +87,7 @@ app.post('/upload', (req, res) => {
         Bucket: process.env.BUCKET,
         Key, 
         Metadata: {
-          'x-file-expiration': expirationTime.toISOString(),
+        //  'x-file-expiration': expirationTime.toISOString(),
         },
       };
 
