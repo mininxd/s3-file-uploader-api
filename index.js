@@ -1,20 +1,20 @@
-import express from 'express';
-import { S3Client, PutObjectCommand, ListObjectsV2Command, GetObjectCommand } from '@aws-sdk/client-s3';
-import { deleteFile } from "./lib/delete.js";
-import { getBucketSize } from "./lib/bucketSize.js";
+import { S3Client, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
 import 'dotenv/config';
 
-const streamToBuffer = (stream) => {
-  return new Promise((resolve, reject) => {
-    const chunks = [];
-    stream.on('data', (chunk) => chunks.push(chunk)); 
-    stream.on('error', (err) => reject(err));
-    stream.on('end', () => resolve(Buffer.concat(chunks))); 
-  });
-};
 
-
+import express from 'express';
 const app = express();
+app.use(express.json());
+
+import checkRoute from './router/check.js';
+import deleteRoute from './router/deteleFile.js';
+import filesRoute from './router/listFile.js';
+
+// Express Routes
+app.use('/files', filesRoute);
+app.use('/check', checkRoute);
+app.use('/delete', deleteRoute);
+
 
 const s3 = new S3Client({
   endpoint: process.env.ENDPOINT,
@@ -37,6 +37,9 @@ app.get('/', async (req, res) => {
   })
 })
 
+
+
+
 app.post('/upload', async (req, res) => {
   if(!req.headers['x-file-name'] || !req.headers['x-file-id']) {
     res.send({
@@ -46,7 +49,7 @@ app.post('/upload', async (req, res) => {
   }
   
   const bucketSize = await getBucketSize();
-  const usage = (bucketSize / (1024 ** 3)).toFixed(2); 
+  const usage = parseFloat((bucketSize / (1024 ** 3)).toFixed(2));
   
   if (usage > 9.5) {
       res.send({ message: "Insufficient storage. Please wait patiently before uploading again." });
@@ -118,102 +121,6 @@ if (!expirationHeader) {
   req.on('error', (err) => {
     res.status(500).send('Error processing the file.');
   });
-});
-
-app.get('/files', async (req, res) => {
-  return res.send({
-      "/:id": "[GET] put your id to list all your files",
-      "/:id/:filename": "[GET] download your file directly",
-    });
-});
-
-
-app.get('/check', async (req, res) => {
-  try {
-  const bucketSize = await getBucketSize();
-  const usage = (bucketSize / (1024 ** 3)).toFixed(2); 
-    res.send({
-      usage: `${usage}GB/10GB`
-    });
-  } catch (error) {
-    res.status(500).send({ message: "Error calculating bucket size", error: error.message });
-  }
-});
-
-
-
-
-// deprecated, but i won't delete this
-app.get('/files/:id', async (req, res) => {
-  const { id } = req.params;
-  const { filename } = req.query;
-  
-  if(!filename) {
-  try {
-    const result = await s3.send(new ListObjectsV2Command({
-      Bucket: process.env.BUCKET,
-      Prefix: id + "/"
-    }));
-
- const allFiles = result.Contents?.map(obj => obj.Key) || [];
- const files = allFiles.map(file => file.replace(`${id}/`, ''));
-
-    res.send({ files });
-  } catch (err) {
-    res.status(500).send({ message: 'Could not list files' });
-  }
-} else {
-  try {
-    const { Body } = await s3.send(new GetObjectCommand({
-      Bucket: process.env.BUCKET,
-      Key: `${id}/${filename}`,
-    }));
-
-    const fileBuffer = await streamToBuffer(Body);
-
-    res.setHeader('Content-Type', 'application/octet-stream');
-    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-
-    res.status(200).send(fileBuffer);
-  } catch (e) {
-    console.error(e);
-    res.status(404).send({ error: 'File not found!' });
-  }
-}
-});
-
-
-// rather than delete old method using queries, im added multiple params for download files
-app.get('/files/:id/:filename', async (req, res) => {
-  const { id, filename } = req.params;
-  
-  try {
-    const { Body } = await s3.send(new GetObjectCommand({
-      Bucket: process.env.BUCKET,
-      Key: `${id}/${filename}`,
-    }));
-
-    const fileBuffer = await streamToBuffer(Body);
-
-    res.setHeader('Content-Type', 'application/octet-stream');
-    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-
-    res.status(200).send(fileBuffer);
-  } catch (e) {
-    console.error(e);
-    res.status(404).send({ error: 'File not found' });
-  }
-});
-
-app.get('/delete/:id/:filename', async (req, res) => {
-  const { id, filename } = req.params;
-
-  try {
-    const result = await deleteFile(id, filename);
-    res.send(result);
-  } catch (e) {
-    res.status(500).send(`error: ${e.message}`);
-  }
 });
 
 
