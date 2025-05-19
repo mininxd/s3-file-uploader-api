@@ -3,7 +3,8 @@ const router = express.Router();
 
 import { deleteFile } from "../lib/delete.js";
 
-router.get('/:id/:filename', async (req, res) => {
+
+router.delete('/:id/:filename', async (req, res) => {
   const { id, filename } = req.params;
   try {
     const result = await deleteFile(id, filename);
